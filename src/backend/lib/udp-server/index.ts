@@ -5,14 +5,16 @@ import * as randomJS from "random-js";
 import { Subject, Subscription } from "rxjs";
 import { privateData } from "../../../shared/lib";
 import {
-    DualshockData,
-    DualshockMeta,
-    GenericDualshockController,
     UdpServerDefaults,
     UdpServerMessage,
 } from "../../models";
+import {
+    DualshockData,
+    DualshockMeta,
+    GenericDualshockController,
+} from "node-controller-api";
 import { ClientRequestTimes } from "./client-request-times";
-
+ 
 /**
  * Internal class data interface.
  */

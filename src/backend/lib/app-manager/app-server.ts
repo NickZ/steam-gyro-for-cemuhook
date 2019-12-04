@@ -1,6 +1,8 @@
-import { DualshockLikeController, UdpServer } from "..";
+import { UdpServer } from "..";
 import { UserSettings } from "../../../shared/models";
 import { AppUserInterface } from "./app-user-interface";
+import { DualshockLikeController } from "node-controller-api";
+
 
 /**
  * App module responsible for server and controller logic.
