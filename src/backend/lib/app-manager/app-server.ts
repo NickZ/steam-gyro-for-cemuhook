@@ -1,6 +1,7 @@
-import { DualshockLikeController, UdpServer } from "..";
+import { UdpServer } from "..";
 import { UserSettings } from "../../../shared/models";
 import { AppUserInterface } from "./app-user-interface";
+import { ControllerMaster } from "../../../controller-api";
 
 /**
  * App module responsible for server and controller logic.
@@ -9,18 +10,18 @@ export class AppServer {
     /**
      * Instance of `UdpServer`.
      */
-    public serverInstance = new UdpServer();
+    public serverInstance: UdpServer;
 
     /**
      * Instance of `DualshockLikeController`.
      */
-    public controller = new DualshockLikeController(0).startWatching();
+    public controllerMaster = new ControllerMaster();
 
     /**
      * @param ui User interface module.
      */
     constructor(private ui: AppUserInterface) {
-        this.serverInstance.addController(this.controller);
+        this.serverInstance = new UdpServer(this.controllerMaster);
     }
 
     /**
@@ -29,6 +30,15 @@ export class AppServer {
      */
     public async start(settings: UserSettings["server"]) {
         await this.serverInstance.start(settings.port, settings.address);
+        this.controllerMaster.startAutoScanning();
+        this.controllerMaster.onListChange.subscribe(({addedControllers, removedControllers})=>{
+            for (const controller of addedControllers){
+                this.serverInstance.addController(controller)
+            }
+            for (const controller of removedControllers){
+                this.serverInstance.removeController(controller)
+            }
+        })
         this.ui.tray.setToolTip(`Server@${settings.address}:${settings.port}`);
     }
 
@@ -38,6 +48,6 @@ export class AppServer {
     public async prepareToExit() {
         await this.serverInstance.stop();
         this.serverInstance.removeController();
-        this.controller.stopWatching().close();
+        this.controllerMaster.stopAutoScanning();
     }
 }
