@@ -11,7 +11,7 @@ import {
     MotionDataWithTimestamp
 } from "./models";
 import { HidFeatureArray } from "./steam-device/hid-feature-array";
-import { debug } from "util";
+import { debug } from "debug";
 
 const defaultDeviceTypes: DeviceType[] = ["steam-dongle" , "steam-wired" , "ds4-bluetooth" , "ds4-wired"];
 
@@ -119,7 +119,7 @@ export class ControllerMaster {
             const refresh = async () => {
                 this.hidDeviceList = hidDevices();
                 const changedItems = await this.refreshItemList(...types);
-                const removedControllers = this.removeControllers(changedItems.removedItems);
+                const removedControllers = this.disconnectControllers(changedItems.removedItems);
                 const addedControllers = this.enumerateControllers();
 
                 if (removedControllers.length > 0 || addedControllers.length > 0){
@@ -153,9 +153,35 @@ export class ControllerMaster {
                         addedControllers.push(controller);
                     } //others... 
                 }
+            // handle reconnect
+            } else if (!found.isConnected && found.isAutoReconnect){
+                found._zreconnect();
+                addedControllers.push(found);
             }
         }
         return addedControllers;
+    }
+
+    /**
+     * Disconnect provided items on controller list
+     * @param itemsToRemove items to remove
+     * @returns newly added Controllers
+     */
+    private disconnectControllers(itemsToDisconnect: Array<DeviceInfo>){
+        const disconnectedControllers = new Array<GenericController<MotionDataWithTimestamp>>();
+        
+        for (const item of itemsToDisconnect){
+            const path = item.path;
+            this.controllerList.find((value, index)=>{
+                if (value.device.deviceInfo.path === path){
+                    disconnectedControllers.push(value);
+                    // Close controller handle
+                    value._zdisconnect();
+                    //delete this.controllerList[index];
+                }
+            })
+        }
+        return disconnectedControllers;
     }
 
     /**
@@ -180,28 +206,6 @@ export class ControllerMaster {
             }
         }
         return devices;
-    }
-
-    /**
-     * Remove provided items from controller list
-     * @param itemsToRemove items to remove
-     * @returns newly added Controllers
-     */
-    private removeControllers(itemsToRemove: Array<DeviceInfo>){
-        const removedControllers = new Array<GenericController<MotionDataWithTimestamp>>();
-        
-        for (const item of itemsToRemove){
-            const path = item.path;
-            this.controllerList.find((value, index)=>{
-                if (value.device.deviceInfo.path === path){
-                    removedControllers.push(value);
-                    // Close controller handle
-                    value.close();
-                    delete this.controllerList[index];
-                }
-            })
-        }
-        return removedControllers;
     }
 
     //adds and removes devices of one specified type

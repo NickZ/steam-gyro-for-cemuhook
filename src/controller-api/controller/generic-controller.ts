@@ -17,6 +17,7 @@ export interface InternalData{
     motionDataSubject: Subject<MotionDataWithTimestamp>;
     openCloseSubject: Subject<boolean>;
     reportSubject: Subject<MotionDataWithTimestamp>;
+    connectSubject: Subject<boolean>;
 }
 
 /**
@@ -39,13 +40,11 @@ export abstract class GenericController<R extends MotionDataWithTimestamp> {
      */
     public abstract id: number;
 
-    /**
-     * GenericSteamDevice's event subscriptions.
-     */
-
     protected autoreconnect:boolean = false;
 
     protected previouslyOpened:boolean = false;
+
+    protected disconnected:boolean = false;
 
     /**
      * GenericSteamDevice's event subscriptions.
@@ -64,6 +63,7 @@ export abstract class GenericController<R extends MotionDataWithTimestamp> {
             motionDataSubject: new Subject(),
             openCloseSubject: new Subject(),
             reportSubject: new Subject(),
+            connectSubject: new Subject()
         });
         this.device!.onError.subscribe((value) => pd.errorSubject.next(value));
         this.device!.onMotionsData.subscribe((value) => pd.motionDataSubject.next(value));
@@ -92,11 +92,14 @@ export abstract class GenericController<R extends MotionDataWithTimestamp> {
     public get motionData() {
         return this.device!.isOpen() ? this.device!.motionData : null;
     }
-    public get isAutoReconnect(): boolean{
-        if(this.autoreconnect){
-            return true;
-        }
-        return false;
+    public get isAutoReconnect(){
+        return this.autoreconnect;
+    }
+    public get wasPreviouslyOpened(){
+        return this.previouslyOpened;
+    }
+    public get isConnected(){
+        return !this.disconnected;
     }
     public abstract readonly controllerType: string
     public abstract readonly deviceType: string
@@ -121,6 +124,10 @@ export abstract class GenericController<R extends MotionDataWithTimestamp> {
     public abstract readonly onOpenClose: Observable<boolean>;
 
     /**
+     * Returns observable for connect and disconnect events.
+     */
+    public abstract readonly onConnection: Observable<boolean>;
+    /**
      * Returns observable for open and close events.
      */
     public abstract readonly onDualshockData: Observable<DualshockData>;
@@ -136,6 +143,29 @@ export abstract class GenericController<R extends MotionDataWithTimestamp> {
     public abstract async open(options?:{autoreconnect?: boolean}): Promise<this>;
     public abstract async close(): Promise<this>;
 
+    /**
+     * @private
+     */
+    public async _zdisconnect(){
+        this.disconnected = true;
+        this.device.deviceInfo.active = false;
+        await this.close();
+        getInternals(this).connectSubject.next(false);
+    }
+
+    /** 
+     * @private
+    */
+    public async _zreconnect(){
+        this.disconnected = false;
+        this.device.deviceInfo.active = true;
+        await this.open();
+        getInternals(this).connectSubject.next(true);
+    }
+
+    public get path() {
+        return this.device.deviceInfo.path;
+    }
     public isOpen() {
         return this.device!.isOpen();
     }

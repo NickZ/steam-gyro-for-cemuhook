@@ -18,6 +18,7 @@ import {
     MotionData,
     MotionDataWithTimestamp
 } from "../../../controller-api"
+import { MatButtonToggleGroupMultiple } from "@angular/material";
 
 
 /**
@@ -179,17 +180,13 @@ export class UdpServer {
      * Remove all controllers or only specified controller.
      * @param index Index of the controller to remove.
      */
-    public removeController(index?: number) {
-        if (index === undefined) {
+    public removeController(controller?: GenericController<MotionDataWithTimestamp> | null) {
+        if (!(controller instanceof GenericController)) {
             for (let i = 0; i < this.controllers.length; i++) {
-                this.removeController(i);
+                this.removeController(this.controllers[i]!.device!);
             }
-        }
-        else if (index > 0 && index < this.controllers.length) {
-            if (this.controllers[index] !== null) {
-                this.controllers[index]!.subscription.unsubscribe();
-                this.controllers[index] = null;
-            }
+        } else {
+            this.controllers = this.controllers.filter(value => value === null || value!.device.path != controller.path);
         }
     }
 

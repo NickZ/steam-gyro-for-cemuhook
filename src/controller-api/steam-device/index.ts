@@ -6,7 +6,7 @@ import { SteamHidDevice } from "./steam-hid-device";
 import { GenericSteamDevice, GenericDevice } from "../models";
 import { DualshockData} from "../models";
 import { GenericController } from "../controller";
-import { debug } from "util";
+import { debug } from "debug";
 
 /**
  * Internal class data interface.
@@ -17,6 +17,7 @@ interface InternalData {
     motionDataSubject: Subject<MotionDataWithTimestamp>;
     openCloseSubject: Subject<boolean>;
     reportSubject: Subject<SteamDeviceReport>;
+    connectSubject: Subject<boolean>;
 }
 
 /**
@@ -58,6 +59,11 @@ export class SteamController extends GenericController<SteamDeviceReport> {
     public get onOpenClose() {
         return getInternals(this).openCloseSubject.asObservable();
     }
+
+    public get onConnection() {
+        return getInternals(this).connectSubject.asObservable();
+    }
+
 
     public get onDualshockData() {
         return getInternals(this).dualshockDataSubject.asObservable();
